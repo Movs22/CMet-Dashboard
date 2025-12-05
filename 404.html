@@ -4,15 +4,15 @@
   }
 </style>
 <main>
-    NOT FOUND
+  <div class="loading-overlay loading">
+    <div class="loading-box">
+      <p style="font-size: 2rem; font-weight: bold;" class="loading-header">Erro</p>
+      <p id="loading-status">Página não encontrada</p>
+    </div>
+  </div>
 </main>
 
-<script>
-  const path = location.pathname + location.search + location.hash;
-  
-  location.href = "/?redirect=" + encodeURIComponent(path);
-  
-</script>
+<script src="/subrouter.js"></script>
 
 <title>Carris Metropolitana - Dashboard</title>
 <meta name="description" content="Dashboard (não oficial) da Carris Metropolitana">

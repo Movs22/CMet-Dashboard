@@ -1,122 +1,55 @@
 <!DOCTYPE html>
 <html lang="pt">
-    <head>
-        <link rel="stylesheet" href="/main.css">
-    </head>
-    <body>
-        <div class="loading-overlay loading">
-            <div class="loading-box">
-                <p style="font-size: 2rem; font-weight: bold;" class="loading-header">A carregar dashboard</p>
-                <p id="loading-status">A carregar página inicial</p>
-                <div class="progress-bar">
-                    <div class="progress-bar-fill" id="loading-progress"></div>
-                </div>
-                <div class="error" style="display: none;" id="error-prompt">
-                </div>
+
+<head>
+    <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+    <div class="loading-overlay" id="loading">
+        <div class="loading-box">
+            <p style="font-size: 2rem; font-weight: bold;" class="loading-header">CMet Dashboard</p>
+            <p id="loading-status">A carregar página inicial</p>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="loading-progress"></div>
+            </div>
+            <div class="error" style="display: none;" id="error-prompt">
             </div>
         </div>
+    </div>
+    <nav class="menu">
+            <a onclick="loadPage('/dashboard');"class="active">Home</a>
+            <a onclick="loadPage('/dashboard/Area?a=1')">Área 1</a>
+            <a onclick="loadPage('/dashboard/Area?a=2')">Área 2</a>
+            <a onclick="loadPage('/dashboard/Area?a=3')">Área 3</a>
+            <a onclick="loadPage('/dashboard/Area?a=4')">Área 4</a>
+            <p id="time">XX:XX:XX YY/YY/ZZZZ</p>
+    </nav>
         <main id="dashboard">
             <div class="line-badge" style="font-size: 2rem; background-color: var(--line-long); color: white">1001</div>
         </main>
         <script src="./router.js"></script>
+        <script src="./loading.js"></script>
+
         <script src="./data.js"></script>
         <script>
-            let progressBar = document.getElementById("loading-progress");
-            let progressStatus = document.getElementById("loading-status");
-            let errorBox = document.getElementById("error-prompt");
-            (async () => {
-                await loadPage("/dashboard")
-                
-                progressBar.style.width = "20%";
-                progressStatus.innerHTML = "A descarregar paragens";
-                stops = await fetch("https://api.cmet.pt/stops").then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.json()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!stops) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT STOPS.JSON DOWNLOAD")
-                
-                progressBar.style.width = "30%";
-                progressStatus.innerHTML = "A descarregar linhas";
-                lines = await fetch("https://api.cmet.pt/lines").then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.json()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!lines) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT LINES.JSON DOWNLOAD")
+            let clock = document.getElementById("time")
+            let rightNow
+            setInterval(updatePageClock, 1000)
 
-                progressBar.style.width = "40%";
-                progressStatus.innerHTML = "A descarregar rotas";
-                routes = await fetch("https://api.cmet.pt/routes").then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.json()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!routes) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT ROUTES.JSON DOWNLOAD")
-
-                current_date = getCurrentOperationalDate()
-
-                progressBar.style.width = "50%";
-                progressStatus.innerHTML = "A descarregar histórico da A1";
-                a1_data = await fetch(HISTORY_ENDPOINT.replace("{DATE}", current_date).replace("{AREA}", "CM1")).then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.text()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!a1_data) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT A1.CMET DOWNLOAD")
-
-                progressBar.style.width = "60%";
-                progressStatus.innerHTML = "A descarregar histórico da A2";
-                a2_data = await fetch(HISTORY_ENDPOINT.replace("{DATE}", current_date).replace("{AREA}", "CM2")).then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.text()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!a2_data) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT A2.CMET DOWNLOAD")
-
-                progressBar.style.width = "70%";
-                progressStatus.innerHTML = "A descarregar histórico da A3";
-                a3_data = await fetch(HISTORY_ENDPOINT.replace("{DATE}", current_date).replace("{AREA}", "CM3")).then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.text()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!a3_data) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT A3.CMET DOWNLOAD")
-
-                progressBar.style.width = "80%";
-                progressStatus.innerHTML = "A descarregar histórico da A4";
-                a4_data = await fetch(HISTORY_ENDPOINT.replace("{DATE}", current_date).replace("{AREA}", "CM4")).then(r => {
-                    if(!r.ok) throw new Error("Failed to fetch " + r.url);
-                    return r.text()
-                }).catch(err => {
-                    errorBox.innerHTML = err;
-                    errorBox.style.display = "block"
-                    return
-                })
-                if(!a4_data) return console.warn("STOPPED PAGE LOADING DUE TO FAILURE AT A4.CMET DOWNLOAD")
-
-                progressBar.style.width = "90%";
-                progressStatus.innerHTML = "A processar dados";
-                
-            })()
+            function updatePageClock() {
+                rightNow = new Date()
+                let y = rightNow.getFullYear()
+                let m = rightNow.getMonth() + 1
+                let d = rightNow.getDate()
+                let hour = rightNow.getHours()
+                let min = rightNow.getMinutes()
+                let sec = rightNow.getSeconds()
+                clock.innerHTML = (hour < 10 ? "0" + hour : hour) + ":" + (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec) + " " + (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y 
+            }
+            updatePageClock()
         </script>
-    </body>
+        <script>//setTimeout(() => load(), 100)</script>
+</body>
+
 </html>

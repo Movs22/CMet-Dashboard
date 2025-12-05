@@ -4,14 +4,36 @@ let stops = null
 let vehicles = null
 let current_date = null
 
-let a1_data = null
-let a2_data = null
-let a3_data = null
-let a4_data = null
+let CM1_data = null
+let CM2_data = null
+let CM3_data = null
+let CM4_data = null
+
+let CM1_processed = null
+let CM2_processed = null
+let CM3_processed = null
+let CM4_processed = null
+
+let stats = {
+  CM1: {},
+  CM2: {},
+  CM3: {},
+  CM4: {},
+  TOTAL: {}
+}
+
+let speeds = {
+  CM1: {},
+  CM2: {},
+  CM3: {},
+  CM4: {},
+  TOTAL: {}
+}
 
 let lines = null
 let routes = null
 let patterns = {}
+let alerts = null
 
 function getCurrentOperationalDate() {
   const now = new Date();

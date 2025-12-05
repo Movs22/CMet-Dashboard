@@ -20,6 +20,48 @@ html, body {
     margin: 0;
 }
 
+nav.menu {
+  display: flex;
+  margin: .5rem; 
+  padding: .5rem; 
+  border-radius: 1rem; 
+  font-size: 1rem; 
+  background-color: var(--foreground);
+  border-color: var(--foreground-light);
+
+  border-width: .25rem;
+  border-style:solid;
+  position: relative;
+
+  color: white;
+  font-weight: bold;
+  gap: 1.5rem;
+}
+
+nav.menu p {
+  margin: 0px;
+  right: 0rem;
+  padding: .5rem;
+  position: absolute;
+}
+
+nav.menu a {
+  padding: .5rem;
+  border-radius: .5rem;
+}
+
+nav.menu a:hover {
+  background-color: var(--accent);
+  color: black;
+  transition: all .5s;
+}
+
+nav.menu a.active {
+  background-color: var(--accent);
+  color: black;
+  transition: all .5s;
+}
+
 .loading-overlay {
   position: fixed;
   inset: 0;

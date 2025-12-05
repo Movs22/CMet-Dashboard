@@ -2,6 +2,8 @@ const loadedScripts = new Set();
 const loadedStyles = new Set();
 const pageCache = new Map();
 
+let notfound = false
+
 async function fetchPage(url) {
   if (pageCache.has(url)) return pageCache.get(url);
 
@@ -71,13 +73,18 @@ async function loadPage(url, push = true) {
     });
 
     if (push) history.pushState({ url }, "", url);
-
+    
+    
   } catch (err) {
     console.log(err)
     history.pushState({ url }, "", url);
     loadPage("/404.html", false);
+    notfound = true
   }
 }
+
+let redirect = new URLSearchParams(window.location.search).get("redirect")
+if(redirect) loadPage(redirect)
 
 window.addEventListener("popstate", e => {
   if (e.state?.url) loadPage(e.state.url, false);
@@ -103,6 +110,3 @@ if (location.pathname !== "/") {
   loadPage(location.pathname, false);
 }
 
-let redirect = new URLSearchParams(window.location.search).get("redirect")
-console.log(redirect)
-if(redirect) loadPage(redirect, false)
