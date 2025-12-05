@@ -1,0 +1,17 @@
+<style>
+  body {
+    visibility: hidden;
+  }
+</style>
+<main>
+    hello worldAAAAAA
+</main>
+
+<script>
+  const path = location.pathname + location.search + location.hash;
+  
+  location.href = "/?redirect=" + encodeURIComponent(path);
+</script>
+
+<title>Carris Metropolitana - Dashboard</title>
+<meta name="description" content="Dashboard (não oficial) da Carris Metropolitana">

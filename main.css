@@ -1,0 +1,125 @@
+:root {
+    --accent: #ffdd00;
+    --background: #191f25;
+    --foreground: #2a353f;
+    --foreground-dark: #20272d;
+    --foreground-light: #3d4d5c;
+
+    --line-short: #3d85c6;
+    --line-long: #c61d23;
+    --line-fast: #fdb71a;
+    --line-interregional: #bb3e96;
+    --line-sea: #0c807e;
+    font-family: Inter, "Inter Fallback", sans-serif;
+}
+
+html, body {
+    background-color: var(--background);
+    height: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.3); 
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.loading-overlay.loading {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.loading-box {
+  padding: 1em 1.5em;
+  background: var(--foreground);
+  color: white;
+  border-radius: 1.5rem;
+  font-size: 1.1rem;
+  position: relative;
+}
+
+.loading-box .error {
+    position: absolute;
+    top: 100%;
+    margin-top: .5rem;
+    width: calc(100% - 1rem);
+    left: 0rem;
+    padding: .5rem;
+    text-align: center;
+    font-size: .8rem;
+    font-weight: bold;
+    border-radius: .5rem;
+    background-color: red;
+}
+
+.loading-box .loading-header {
+    padding: .5rem;
+    border-bottom: .2rem solid var(--accent);
+}
+
+.loading-box .progress-bar {
+    width: 70%;
+    position: relative;
+    left: 15%;
+    right: 15%;
+    height: 1rem;
+    background: var(--foreground-dark);
+    border-color: var(--foreground-light);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.loading-box .progress-bar .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.loading-box p {
+    margin: 0px;
+    text-align: center;
+    margin-bottom: .5rem;
+}
+
+.line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.35em 0.8em;
+    border-radius: 999px;
+
+    font-family: Inter, "Inter Fallback", sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.08em;
+
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+}
+
+
+#app {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+#app.loading {
+  opacity: 0;
+  transform: translateY(6px);
+}
