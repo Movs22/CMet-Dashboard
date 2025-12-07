@@ -1,0 +1,239 @@
+:root {
+    --accent: #ffdd00;
+    --background: #191f25;
+    --foreground: #2a353f;
+    --foreground-dark: #20272d;
+    --foreground-light: #3d4d5c;
+
+    --foreground-warning: #d23939;
+    --foreground-warning-light: #e75a5a;
+
+    --line-short: #3d85c6;
+    --line-long: #c61d23;
+    --line-fast: #fdb71a;
+    --line-interregional: #bb3e96;
+    --line-sea: #0c807e;
+
+    --success: #22a64e;
+    --valid: #269cb9;
+
+    --error: #d23939;
+    font-family: Inter, "Inter Fallback", sans-serif;
+}
+
+html, body {
+    background-color: var(--background);
+    max-height: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+nav.menu {
+  display: flex;
+  margin: .5rem; 
+  padding: .5rem; 
+  border-radius: 1rem; 
+  font-size: 1rem; 
+  background-color: var(--foreground);
+  border-color: var(--foreground-light);
+
+  border-width: .25rem;
+  border-style:solid;
+  position: relative;
+
+  color: white;
+  font-weight: bold;
+  gap: 1.5rem;
+}
+
+nav.menu p {
+  margin: 0px;
+  right: 0rem;
+  padding: .5rem;
+  position: absolute;
+}
+
+.warning {
+  align-items: center;
+  text-align: center;
+  display: block;
+  background-color: var(--foreground-warning);
+  color: white;
+  padding-left: .5rem;
+  padding-right: .5rem;
+  line-height: 2rem;
+  margin: .5rem;
+  border-radius: 1rem;
+}
+
+.warning a {
+  text-decoration: none;
+  font-weight: bold;
+  color: var(--accent);
+  font-style: italic;
+  transition: all .25s;
+}
+
+.warning a:hover {
+  color: white;
+  transition: all .25s;
+}
+
+#dashboard {
+  align-items: center;
+  text-align: center;
+  display: block;
+}
+
+nav.menu a {
+  padding: .5rem;
+  border-radius: .5rem;
+  cursor:pointer;
+}
+
+nav.menu a:hover {
+  background-color: var(--accent);
+  color: black;
+  transition: all .5s;
+}
+
+nav.menu a.active {
+  background-color: var(--accent);
+  color: black;
+  transition: all .5s;
+}
+
+@media (max-width:850px) {
+  nav.menu {
+    margin: .25rem; 
+    padding: .25rem; 
+    border-radius: 1rem; 
+    font-size: .75rem; 
+    background-color: var(--foreground);
+    border-color: var(--foreground-light);
+
+    border-width: .25rem;
+    border-style:solid;
+    position: relative;
+
+    color: white;
+    font-weight: bold;
+    gap: 1rem;
+  }
+
+  nav.menu p {
+    transition: all .2s;
+    margin: 0px;
+    right: 0rem;
+    padding: .25rem;
+    position: absolute;
+  }
+
+  nav.menu a {
+    padding: .25rem;
+  }
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.3); 
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.loading-overlay.loading {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.loading-box {
+  padding: 1em 1.5em;
+  background: var(--foreground);
+  color: white;
+  border-radius: 1.5rem;
+  font-size: 1.1rem;
+  position: relative;
+}
+
+.loading-box .error {
+    position: absolute;
+    top: 100%;
+    margin-top: .5rem;
+    width: calc(100% - 1rem);
+    left: 0rem;
+    padding: .5rem;
+    text-align: center;
+    font-size: .8rem;
+    font-weight: bold;
+    border-radius: .5rem;
+    background-color: red;
+}
+
+.loading-box .loading-header {
+    padding: .5rem;
+    border-bottom: .2rem solid var(--accent);
+}
+
+.loading-box .progress-bar {
+    width: 70%;
+    position: relative;
+    left: 15%;
+    right: 15%;
+    height: 1rem;
+    background: var(--foreground-dark);
+    border-color: var(--foreground-light);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.loading-box .progress-bar .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.loading-box p {
+    margin: 0px;
+    text-align: center;
+    margin-bottom: .5rem;
+}
+
+.line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.35em 0.8em;
+    border-radius: 999px;
+
+    font-family: Inter, "Inter Fallback", sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.08em;
+
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+}
+
+
+#app {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+#app.loading {
+  opacity: 0;
+  transform: translateY(6px);
+}
