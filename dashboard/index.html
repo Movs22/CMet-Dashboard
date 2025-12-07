@@ -4,10 +4,107 @@
   }
 </style>
 <main>
-  
+
+  <div class="pane">
+    <section id="stats">
+      <p class="header">Estatísticas</p>
+      <ul id="stats-vecspeed">
+        <li id="vehicles">
+          <div class="line-badge" style="background-color: var(--line-long); color: white">---</div>
+          <br>veículos
+        </li>
+        <li id="speed">
+          <div class="line-badge" style="background-color: var(--line-short); color: white">--.-</div>
+          <br>km/h (vel. média)</p>
+        </li>
+        <li id="passengers">
+          <div class="line-badge" style="background-color: var(--line-fast); color: white">--.-K</div>
+          <br>passageiros
+        </li>
+        <li id="trips">
+          <div class="line-badge" style="background-color: var(--line-interregional); color: white">--.-K</div>
+          <br>viagens realizadas</p>
+        </li>
+        <li id="kms">
+          <div class="line-badge" style="background-color: var(--line-sea); color: white">---K</div>
+          <br>KMs realizados</p>
+        </li>
+      </ul>
+      <p style="text-align: left; font-weight: bold; font-size: 1.25rem; margin: 0; padding: 0">Veículos por Área:</p>
+      <ul id="stats-operators">
+        <li id="stats-op-a1">
+          <div class="line-badge" style="background-color: var(--line-long); color: white">0</div> Viação Alvorada
+          (A1)
+        </li>
+        <li id="stats-op-a2">
+          <div class="line-badge" style="background-color: var(--line-fast); color: white">0</div> Rodoviária de
+          Lisboa (A2)
+        </li>
+        <li id="stats-op-a3">
+          <div class="line-badge" style="background-color: var(--line-sea); color: white">0</div> Transportes Sul do
+          Tejo (A3)
+        </li>
+        <li id="stats-op-a4">
+          <div class="line-badge" style="background-color: var(--line-short); color: white">0</div> Alsa Todi
+          (A4)
+        </li>
+      </ul>
+    </section>
+    <section id="live-vehicles">
+      <p class="header">Veículos</p>
+      <div id="map">
+        <div id="info" style="display: none;">
+          <button id="close" onclick="hideInfo()">x</button>
+          <ul>
+            <li id="line">
+              <div class="line-badge" style="background-color: var(--line-short); color: white">1000</div>
+            </li>
+            <li id="license-plate">
+              <div class="__outer">
+                <div class="pt-band">PT</div>
+                <div id="plate">AB-12-34</div>
+                <div id="reg-date"><span>25</span><span>01</span></div>
+              </div>
+            </li>
+            <li id="id" title="ID do veículo"><span class="key">ID:</span> 00|0000</li>
+            <li id="placa" title="Indicador dos serviços de um carro (papel que vai na frente do veículo)"><span
+                class="key">Placa:</span> XXXX (Queluz Baixo)</li>
+            <li id="chapa" title="Motorista"><span class="key">Chapa:</span> XXXX (Carcavelos)</li>
+            <li id="state"><span class="key">Estado atual:</span> STATE</li>
+            <li id="stop" style="border-bottom: none !important; padding-bottom: 0 !important;"><span
+                class="key">Próxima paragem:</span> #XXXXXX</li>
+            <li id="stopName" style="font-size: .6rem; color: #cfcfcf; padding-top: 0 !important;">Av Emb Augusto Castro
+            </li>
+            <li id="desvio"><span class="key">Desvio:</span> <span style="color: red"> 0.0%</span></li>
+            <li id="trip" style="font-size: .6rem; color: #cfcfcf">XXXX</li>
+            <li><button id="viewVehicle">Ver veículo</button><button id="viewVehicle">Ver viagem</button></li>
+          </ul>
+        </div>
+        <p id="searchBar" style="display: none;"></p>
+      </div>
+    </section>
+    <section id="fleet">
+      <p class="header">Frota</p>
+      <div>
+        <div><canvas id="fleetChart"></canvas></div>
+        <div><canvas id="perOperatorChart"></canvas></div>
+        <div><canvas id="contactlessChart"></canvas></div>
+        <div><canvas id="ageChart"></canvas></div>
+      </div>
+    </section>
+    <section id="today">
+      <p class="header">Operação</p>
+      <canvas id="vehicleChart"></canvas>
+      <canvas id="speedChart"></canvas>
+    </section>
+  </div>
+  <script src="/utils/chapas.js"></script>
+  <script src="/dashboard/main.js"></script>
 </main>
 
+<meta name="script" content="main()">
 <script src="/subrouter.js"></script>
+<link rel="stylesheet" href="/dashboard/main.css">
 
 <title>CMet Dashboard - Início</title>
 <meta name="description" content="Dashboard (não oficial) da Carris Metropolitana">

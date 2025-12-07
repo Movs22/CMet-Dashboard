@@ -5,17 +5,25 @@
     --foreground-dark: #20272d;
     --foreground-light: #3d4d5c;
 
+    --foreground-warning: #d23939;
+    --foreground-warning-light: #e75a5a;
+
     --line-short: #3d85c6;
     --line-long: #c61d23;
     --line-fast: #fdb71a;
     --line-interregional: #bb3e96;
     --line-sea: #0c807e;
+
+    --success: #22a64e;
+    --valid: #269cb9;
+
+    --error: #d23939;
     font-family: Inter, "Inter Fallback", sans-serif;
 }
 
 html, body {
     background-color: var(--background);
-    height: 100%;
+    max-height: 100%;
     padding: 0;
     margin: 0;
 }
@@ -45,9 +53,42 @@ nav.menu p {
   position: absolute;
 }
 
+.warning {
+  align-items: center;
+  text-align: center;
+  display: block;
+  background-color: var(--foreground-warning);
+  color: white;
+  padding-left: .5rem;
+  padding-right: .5rem;
+  line-height: 2rem;
+  margin: .5rem;
+  border-radius: 1rem;
+}
+
+.warning a {
+  text-decoration: none;
+  font-weight: bold;
+  color: var(--accent);
+  font-style: italic;
+  transition: all .25s;
+}
+
+.warning a:hover {
+  color: white;
+  transition: all .25s;
+}
+
+#dashboard {
+  align-items: center;
+  text-align: center;
+  display: block;
+}
+
 nav.menu a {
   padding: .5rem;
   border-radius: .5rem;
+  cursor:pointer;
 }
 
 nav.menu a:hover {
@@ -60,6 +101,37 @@ nav.menu a.active {
   background-color: var(--accent);
   color: black;
   transition: all .5s;
+}
+
+@media (max-width:850px) {
+  nav.menu {
+    margin: .25rem; 
+    padding: .25rem; 
+    border-radius: 1rem; 
+    font-size: .75rem; 
+    background-color: var(--foreground);
+    border-color: var(--foreground-light);
+
+    border-width: .25rem;
+    border-style:solid;
+    position: relative;
+
+    color: white;
+    font-weight: bold;
+    gap: 1rem;
+  }
+
+  nav.menu p {
+    transition: all .2s;
+    margin: 0px;
+    right: 0rem;
+    padding: .25rem;
+    position: absolute;
+  }
+
+  nav.menu a {
+    padding: .25rem;
+  }
 }
 
 .loading-overlay {

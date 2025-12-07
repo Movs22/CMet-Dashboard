@@ -19,13 +19,12 @@ function showError(text) {
 let p = 0;
 
 async function load() {
-    console.log(notfound)
-    if(notfound) return loading.classList.remove("loading")
-    
-    if(window.Location.pathname === "/") loadPage("/dashboard")
+
+    if (notfound) return loading.classList.remove("loading")
+
     p = 10
     setStage(p, "A descarregar paragens")
-    
+
     stops = await fetch("https://api.cmet.pt/stops").then(r => {
         if (!r.ok) throw new Error("Failed to fetch " + r.url);
         return r.json()
@@ -59,41 +58,46 @@ async function load() {
 
 
     current_date = getCurrentOperationalDate()
-    
+
     p = 50
     setStage(p, "A descarregar dados")
     await Promise.all(
-        
-        ["CM1","CM2","CM3","CM4"].map(async area => {
+
+        ["CM1", "CM2", "CM3", "CM4"].map(async area => {
             const temp_data = await fetch(HISTORY_ENDPOINT.replace("{DATE}", current_date).replace("{AREA}", area)).then(r => {
                 if (!r.ok) throw new Error("Failed to fetch " + r.url);
                 return r.text()
             }).catch(showError)
             p = p + 10
             setStage(p, "A descarregar dados")
-            eval(area + "_data = temp_data")
+            dataStore[area] = temp_data
         })
     )
 
     setStage(p, "A processar dados");
 
-    ["CM1","CM2","CM3","CM4"].forEach(area => {
+    ["CM1", "CM2", "CM3", "CM4"].forEach(area => {
 
-        let toProcess = eval(area + "_data").split("\n").splice(1)
+        let toProcess = dataStore[area].split("\n").splice(1)
         let processed = {}
         let vehicles
-        for(let i = 0; i < toProcess.length; i += 2) {
-            vehicles = toProcess[i+1].split("€").map(z => z.split("<"))
+        for (let i = 0; i < toProcess.length; i += 2) {
+            vehicles = toProcess[i + 1].split("€").map(z => z.split("<"))
             processed[toProcess[i]] = vehicles
             speeds[area][toProcess[i]] = vehicles.map(z => parseFloat(z[3])).reduce((acc, val) => acc + val, 0)
             speeds.TOTAL[toProcess[i]] = (speeds.TOTAL[toProcess[i]] || 0) + vehicles.map(z => parseFloat(z[3])).reduce((acc, val) => acc + val, 0)
             stats[area][toProcess[i]] = vehicles.length
             stats.TOTAL[toProcess[i]] = (stats.TOTAL[toProcess[i]] || 0) + vehicles.length
         }
+        processedDataStore[area] = processed
     })
-    
+
     p = 100
     setStage(p, "Carregado!")
     loading.classList.remove("loading")
+    if (!window.Location.pathname || window.Location.pathname === "/") return loadPage("/dashboard")
+    let redirect = new URLSearchParams(window.location.search).get("redirect")
+
+    if (redirect) loadPage(redirect)
 }
 

@@ -2,6 +2,8 @@ const loadedScripts = new Set();
 const loadedStyles = new Set();
 const pageCache = new Map();
 
+const intervals = new Set();
+
 let notfound = false
 
 async function fetchPage(url) {
@@ -56,6 +58,37 @@ async function loadPage(url, push = true) {
       }
     });
 
+    async function loadScriptSequential(script) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+
+        if (script.src) {
+          s.src = script.src;
+          s.onload = resolve;
+          s.onerror = reject;
+        } else {
+          s.textContent = script.textContent;
+          resolve();
+        }
+
+        document.body.appendChild(s);
+      });
+    }
+
+    async function processScriptsSequentially(container) {
+      const scripts = [...container.querySelectorAll("script")];
+
+      for (const script of scripts) {
+        const key = script.src || script.textContent;
+        if (loadedScripts.has(key)) continue;
+
+        await loadScriptSequential(script);
+        loadedScripts.add(key);
+      }
+    }
+
+    processScriptsSequentially(newMain)
+
     newMain.querySelectorAll("script").forEach(script => {
       const key = script.src || script.textContent;
       if (loadedScripts.has(key)) return;
@@ -63,7 +96,7 @@ async function loadPage(url, push = true) {
       const s = document.createElement("script");
       if (script.src) {
         s.src = script.src;
-        s.defer = true;
+        s.defer;
       } else {
         s.textContent = script.textContent;
       }
@@ -72,9 +105,18 @@ async function loadPage(url, push = true) {
       loadedScripts.add(key);
     });
 
+    const runScripts = doc.querySelectorAll('meta[name="script"]');
+
+    setTimeout(() => {
+      runScripts.forEach(script => {
+        if (script.content) eval(script.content)
+      });
+    }, 500)
+
     if (push) history.pushState({ url }, "", url);
-    
-    
+    intervals.forEach(z => clearInterval(z))
+    intervals.clear()
+
   } catch (err) {
     console.log(err)
     history.pushState({ url }, "", url);
@@ -83,11 +125,14 @@ async function loadPage(url, push = true) {
   }
 }
 
-let redirect = new URLSearchParams(window.location.search).get("redirect")
-if(redirect) loadPage(redirect)
+
 
 window.addEventListener("popstate", e => {
-  if (e.state?.url) loadPage(e.state.url, false);
+  if (e.state?.url) {
+    loadPage(e.state.url, false);
+    if (e.state?.url.startsWith("/dashboard/Area")) highlight("area" + new URLSearchParams(e.state?.url.split("?")[1]).get("a"))
+    else if (e.state?.url.startsWith("/dashboard")) highlight('home')
+  }
 });
 
 document.addEventListener("click", e => {

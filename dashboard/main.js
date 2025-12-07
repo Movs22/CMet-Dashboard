@@ -1,0 +1,884 @@
+vehicleLayer = null;
+
+vehicleRegistry = new Map();
+
+vehicleIcon = null;
+
+vehicleInfo = null
+
+selectedVehicle = null
+
+patternsCache = new Map()
+shapesCache = new Map()
+vehicleCache = new Map()
+
+timeLabels = null;
+vehicleChartDatasets = null;
+speedChartDatasets = null;
+
+polyline = null;
+polylineLine = null;
+
+vehicleChart = null;
+speedChart = null;
+
+fleetChart, perOperatorChart, contactlessChart, ageChart = null;
+
+function closestPointOnSegment(p, a, b) {
+    const at = L.latLng(a);
+    const bt = L.latLng(b);
+    const pt = L.latLng(p);
+
+    const ax = at.lng, ay = at.lat;
+    const bx = bt.lng, by = bt.lat;
+    const px = pt.lng, py = pt.lat;
+
+    const dx = bx - ax;
+    const dy = by - ay;
+
+    let t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+
+
+    if (isNaN(t)) t = 0
+
+    const clampedT = Math.max(0, Math.min(1, t));
+
+
+    return L.latLng(
+        ay + clampedT * dy,
+        ax + clampedT * dx
+    );
+}
+
+function computeGTFSProgress(vehicleLatLng, shape) {
+    let closest = {
+        distToRoute: Infinity
+    };
+
+    for (let i = 0; i < shape.length - 1; i++) {
+        const a = shape[i];
+        const b = shape[i + 1];
+
+        const projected = closestPointOnSegment(vehicleLatLng, a.latlng, b.latlng); // "snaps" vehicle onto route
+        const d = projected.distanceTo(vehicleLatLng);
+
+        if (d < closest.distToRoute) {
+            closest = {
+                distToRoute: d
+            };
+        }
+    }
+    return {
+        distFromRoute: closest.distToRoute,
+    };
+}
+
+async function showInfo(vecId) {
+    vec = vehicleCache.get(vecId)
+    vehicleRegistry.keys().forEach(k => {
+        if (k !== vecId) {
+            vehicleLayer.removeLayer(vehicleRegistry.get(k));
+        }
+    })
+
+    selectedVehicle = vec.id
+
+    vehicleInfo.querySelector("#line .line-badge").innerHTML = vec.line_id
+    vehicleInfo.querySelector("#line .line-badge").style.background = lines.find(z => z.id === vec.line_id).color
+
+    vehicleInfo.querySelector("#license-plate #plate").innerHTML = (vec.license_plate || "??-??-??")
+    vehicleInfo.querySelector("#license-plate #reg-date").innerHTML = "<span>" + ((vec.registration_date || "????????").substring(2, 4)) + "</span><span>" + (vec.registration_date || "????????").substring(4, 6) + "</span>"
+
+    vehicleInfo.querySelector("#id").innerHTML = "<span class=\"key\">ID:</span> " + vec.id
+
+    vehicleInfo.querySelector("#placa").innerHTML = "<span class=\"key\">Placa:</span> " + formatPlaca(vec.block_id, vec.agency_id)
+    vehicleInfo.querySelector("#chapa").innerHTML = "<span class=\"key\">Chapa:</span> " + formatChapa(vec.shift_id, vec.agency_id)
+
+    vehicleInfo.querySelector("#trip").innerHTML = "<span class=\"key\">Trip ID:</span> " + vec.trip_id
+    vehicleInfo.querySelector("#state").innerHTML = "<span class=\"key\">Estado:</span> " + vec.current_status
+
+    vehicleInfo.querySelector("#stop").innerHTML = "<span class=\"key\">Próxima paragem:</span> #" + vec.stop_id
+    vehicleInfo.querySelector("#stopName").innerHTML = stops.find(z => z.id === vec.stop_id).long_name
+    vehicleInfo.querySelector("#desvio").innerHTML = "<span class=\"key\">Desvio:</span> <span>--m </span>"
+    vehicleInfo.style.display = "block"
+
+    let pattern = patternsCache.get(vec.pattern_id) || await fetch(API + "patterns/" + vec.pattern_id).then(r => r.json())
+    if (!patternsCache.get(vec.pattern_id)) patternsCache.set(vec.pattern_id, pattern)
+    let shape = shapesCache.get(pattern[0].shape_id) || await fetch(API + "shapes/" + pattern[0].shape_id).then(r => r.json())
+    if (!shapesCache.get(pattern[0].shape_id)) shapesCache.set(pattern[0].shape_id, shape)
+    if (polyline) vehicleLayer.removeLayer(polyline)
+    if (polylineLine) vehicleLayer.removeLayer(polylineLine)
+
+    const latlngs = shape.geojson.geometry.coordinates.map(c => [c[1], c[0]]);
+    polyline = L.polyline(latlngs, { color: pattern[0].color, weight: 8 });
+    polyline.addTo(vehicleLayer);
+
+    polylineLine = L.polylineDecorator(polyline, {
+        patterns: [
+            { offset: 0, repeat: 20, symbol: L.Symbol.arrowHead({ pixelSize: 3, pathOptions: { color: 'white', fillOpacity: 1 } }) }
+        ]
+    });
+    polylineLine.addTo(vehicleLayer);
+
+    const rawShape = shape.points
+        .sort((a, b) => a.shape_pt_sequence - b.shape_pt_sequence)
+        .map(p => ({
+            latlng: L.latLng(p.shape_pt_lat, p.shape_pt_lon),
+            dist: p.shape_dist_traveled * 1000
+        }));
+    result = computeGTFSProgress([vec.lat, vec.lon], rawShape)
+    vehicleInfo.querySelector("#desvio").innerHTML = "<span class=\"key\">Desvio:</span> <span style=\"" + (result.distFromRoute > 30 ? "color: red" : "") + "\">" + (result.distFromRoute > 30 ? "DESVIO DA ROTA" : "N/A") + "</span>"
+}
+
+function setupMap() {
+    let map = L.map("map", {
+        center: [38.69444, -9.0973],
+        zoom: 13,
+        preferCanvas: true
+    });
+
+    L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+            maxZoom: 20,
+            attribution: ""
+        }
+    ).addTo(map)
+
+    vehicleLayer = L.layerGroup().addTo(map);
+
+    const SCALE_FACTOR = 0.075
+    vehicleIcon = L.icon({
+        iconUrl: "https://carrismetropolitana.pt/assets/map/bus-regular.png",
+        iconSize: [200 * SCALE_FACTOR, 504 * SCALE_FACTOR],
+        iconAnchor: [100 * SCALE_FACTOR, 252 * SCALE_FACTOR]
+    });
+
+    vehicleIcon2 = L.icon({
+        iconUrl: "https://carrismetropolitana.pt/assets/map/bus-contactless.png",
+        iconSize: [200 * SCALE_FACTOR, 504 * SCALE_FACTOR],
+        iconAnchor: [100 * SCALE_FACTOR, 252 * SCALE_FACTOR]
+    });
+}
+
+function glideTo(vehicle, newLat, newLng, duration = 800) {
+    if (vehicle.isAnimating) return;
+
+    vehicle.isAnimating = true;
+
+    const startLat = vehicle.currentPos.lat;
+    const startLng = vehicle.currentPos.lng;
+    const startTime = performance.now();
+
+    function animate(now) {
+        const t = Math.min((now - startTime) / duration, 1);
+
+        const ease = t
+
+        const lat = startLat + (newLat - startLat) * ease;
+        const lng = startLng + (newLng - startLng) * ease;
+
+        vehicle.setLatLng([lat, lng]);
+
+        if (t < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            vehicle.currentPos = { lat: newLat, lng: newLng };
+            vehicle.isAnimating = false;
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+function hideInfo() {
+    document.getElementById('info').style.display = 'none';
+    selectedVehicle = null
+    vehicleRegistry.keys().forEach(k => checkFilters(k, false) ? vehicleRegistry.get(k).addTo(vehicleLayer) : null)
+    if (polyline) vehicleLayer.removeLayer(polyline)
+    if (polylineLine) vehicleLayer.removeLayer(polylineLine);
+    polyline = null;
+    polylineLine = null
+}
+
+filters = {
+}
+
+searchTerm = ""
+
+searchBar = null
+
+function checkValue(key, val) {
+    if (key === "LINE") {
+        if (val.startsWith("[")) {
+            value1 = val.substring(1, 5)
+            value2 = val.substring(6, 10)
+            if (parseInt(value1) > parseInt(value2)) return "<span class=\"token error\">" + val + "</span>"
+            if (val[5] !== "-") return "<span class=\"token error\">" + val + "</span>"
+            return "<span class=\"token " + (val.endsWith("]") && val.length === 11 ? "" : "error") +
+                "\">[</span><span class=\"token " + (/^[0-9?]{4}$/.test(value1) ? "accent" : "error")
+                + "\">" + value1 +
+                "</span>" + val.substring(5, 6) + "<span class=\"token " + (/^[0-9?]{4}$/.test(value2) ? "accent" : "error")
+                + "\">" + value2 + "</span>" + val.substring(10, 11)
+        } else {
+            if (/^!?[0-9X?]{4}$/.test(val)) return "<span class=\"token accent\">" + val + "</span>"
+            return "<span class=\"token error\">" + val + "</span>"
+        }
+    }
+    if (key === "ID") {
+        if (val.includes("|") && !["41", "42", "43", "44"].includes(val.split("|")[0])) return "<span class=\"token error\">" + val + "</span>"
+        val2 = ""
+        if (val[2] === "|") {
+            vals = val.split("|")
+            val2 = vals.slice(0, -1).join("|") + "|"
+            val = vals[vals.length - 1]
+        }
+        if (val === "") return "<span class=\"token accent\">" + val2 + val + "</span>"
+        if (val.startsWith("[")) {
+            value1 = val.split("-")[0].replace("[", "")
+            value2 = (val.split("-")[1] || "").replace("]", "")
+            if (parseInt(value1) > parseInt(value2)) return "<span class=\"token error\">" + val2 + val + "</span>"
+            return "<span class=\"token accent\">" + val2 + "</span><span class=\"token " + (val.endsWith("]") ? "" : "error") +
+                "\">[</span><span class=\"token " + (/^[0-9]+$/.test(value1) ? "valid" : "error")
+                + "\">" + value1 +
+                "</span>" + (val.includes("-") ? "-" : "") + "<span class=\"token " + (/^[0-9]+$/.test(value2) ? "valid" : "error")
+                + "\">" + value2 + "</span>" + (val.endsWith("]") ? "]" : "")
+        }
+        if (!/^[0-9X?]+$/.test(val)) return "<span class=\"token error\">" + val2 + val + "</span>"
+        return "<span class=\"token accent\">" + val2 + val + "</span>"
+    }
+    if (key === "CHP" || key === "PLC") return val
+}
+
+function updateSearchbar() {
+    tokens = searchTerm.split(" ")
+    if (tokens.length === 0 || tokens.join("") === "") {
+        searchBar.style.display = "none"
+        return
+    }
+    hideInfo()
+    searchBar.style.display = "block"
+    let tokensRemapped = []
+    let token;
+    for (let i = 0; i < tokens.length; i++) {
+        if (token === "") tokensRemapped[i] = ""
+        token = tokens[i]
+        if (!token.includes("=")) {
+            tokensRemapped[i] = "<span class=\"token grey\">" + token + "</span>"
+            continue
+        }
+        tokenSplit = token.split("=")
+        if (["CHP", "PLC", "ID", "LINE"].includes(tokenSplit[0])) {
+            tokensRemapped[i] = "<span class=\"token valid\">" + tokenSplit[0] + "</span>=" + checkValue(tokenSplit[0], tokenSplit[1])
+        } else {
+            tokensRemapped[i] = "<span class=\"token error\">" + tokenSplit[0] + "</span>=<span class=\"token grey\">" + tokenSplit[1] + "</span>"
+        }
+    }
+    searchBar.innerHTML = tokensRemapped.join(" ")
+    if (!tokensRemapped.join(" ").includes("token error")) {
+        filterVehicles(tokens.filter(a => a.includes("=")).map(z => z.split("=")).filter(z => ["CHP", "PLC", "ID", "LINE"].includes(z[0])))
+    } else {
+        filters = {}
+        vehicleRegistry.keys().forEach(vec => {
+            checkFilters(vec)
+        })
+    }
+}
+
+function filterVehicles(tokens) {
+    filters = {}
+    tokens.forEach(token => {
+        switch (token[0]) {
+            case "ID":
+                filters["id"] = {}
+                if (token[1].includes("|")) {
+                    filters["id"].agency = token[1].split("|")[0]
+                    token[1] = token[1].split("|")[1]
+                }
+                if (token[1].startsWith("[")) {
+                    token[1] = token[1].replace("[", "").replace("]", "").split("-")
+                    filters["id"] = { ...filters["id"], min: parseInt(token[1][0]), max: parseInt(token[1][1]) }
+                } else if (token[1] !== "") {
+                    filters["id"] = { ...filters["id"], match: new RegExp("^" + token[1].replaceAll("X", "[0-9]") + "$") }
+                }
+                break;
+            case "LINE":
+                filters["line"] = {}
+                if (token[1].startsWith("!")) {
+                    filters["line"].flipped = true
+                    token[1] = token[1].substring(1)
+                }
+                if (token[1].startsWith("[")) {
+                    token[1] = token[1].replace("[", "").replace("]", "").split("-")
+                    filters["line"] = { ...filters["line"], min: parseInt(token[1][0]), max: parseInt(token[1][1]) }
+                } else {
+                    filters["line"] = { ...filters["line"], match: new RegExp("^" + token[1].replaceAll("X", "[0-9]") + "$") }
+                }
+                break;
+            case "CHP":
+                filters["shift_id"] = {}
+                if (token[1].startsWith("!")) {
+                    filters["shift_id"].flipped = true
+                    token[1] = token[1].substring(1)
+                }
+                filters["shift_id"].match = new RegExp(token[1].replaceAll("X", "[0-9]") + "")
+                break;
+            case "PLC":
+                filters["block_id"] = {}
+                if (token[1].startsWith("!")) {
+                    filters["block_id"].flipped = true
+                    token[1] = token[1].substring(1)
+                }
+                filters["block_id"].match = new RegExp(token[1].replaceAll("X", "[0-9]") + "")
+                break;
+            default:
+                console.warn("Unknown filter " + token[0])
+                break;
+
+        }
+
+
+        vehicleRegistry.keys().forEach(vec => {
+            checkFilters(vec)
+        })
+    })
+}
+
+function checkFilters(vec, remove = true) {
+    let vehicle = vehicleCache.get(vec)
+    if (filters["shift_id"]) {
+        if (filters.shift_id.flipped && vehicle.shift_id.match(filters.shift_id.match)) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        } else if (!vehicle.shift_id.match(filters.shift_id.match) && !filters.shift_id.flipped) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+    }
+    if (filters["block_id"]) {
+        if (filters.block_id.flipped && vehicle.block_id.match(filters.block_id.match)) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        } else if (!vehicle.block_id.match(filters.block_id.match) && !filters.block_id.flipped) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+    }
+    if (filters["id"]) {
+        if (filters.id.agency && vehicle.agency_id !== filters.id.agency) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+        if (filters.id.match && !vehicle.id.split("|")[1].match(filters.id.match)) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+        let n = parseInt(vehicle.id.split("|")[1])
+        if (filters.id.min > n || filters.id.max < n) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+    }
+    if (filters["line"]) {
+        if (filters.line.match && (filters.line.flipped && vehicle.line_id.match(filters.line.match)) || (!filters.line.flipped && !vehicle.line_id.match(filters.line.match))) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+        let n = parseInt(vehicle.line_id)
+        if ((filters.line.min > n || filters.line.max < n) && !filters.line.flipped) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+        if ((filters.line.min <= n && filters.line.max >= n) && filters.line.flipped) {
+            if (remove) vehicleLayer.removeLayer(vehicleRegistry.get(vec))
+            return false
+        }
+    }
+    if (remove) vehicleRegistry.get(vec).addTo(vehicleLayer)
+    return true
+}
+
+async function refresh() {
+    let today = getCurrentOperationalDate(true) / 1000
+    let statsDiv = document.querySelector("#stats")
+    await fetch(API + "vehicles").then(r => r.json()).then(v2 => {
+
+        fleetChart.config.data.datasets[0].data = [v2.filter(z => z.timestamp >= (Date.now() / 1000 - 120)).length, v2.filter(z => z.timestamp < (Date.now() / 1000 - 120) && z.timestamp >= today).length, v2.filter(z => z.timestamp <= today && z.timestamp >= (today - 7 * 24 * 3600)).length, v2.filter(z => !z.timestamp || z.timestamp < (today - 7 * 24 * 3600)).length]
+
+        perOperatorChart.config.data.datasets[0].data = [v2.filter(z => z.agency_id === "41").length, v2.filter(z => z.agency_id === "42").length, v2.filter(z => z.agency_id === "43").length, v2.filter(z => z.agency_id === "44").length]
+
+        contactlessChart.config.data.datasets[0].data = [v2.filter(z => z.contactless && z.contactless === true).length, v2.filter(z => z.contactless !== undefined && z.contactless === false).length, v2.filter(z => !z.contactless && z.contactless !== false).length]
+
+        function checkYear(z) {
+            z = parseInt(z)
+            if (z > 2018) return z
+            if (z > 2014) return "2014-2018"
+            return "<2014"
+        }
+
+        let regYearNoData = 0
+        let regYears = {}
+        v2.map(z => z.registration_date ? regYears[checkYear(z.registration_date.substring(0, 4))] = (regYears[checkYear(z.registration_date.substring(0, 4))] || 0) + 1 : regYearNoData += 1)
+
+        ageChart.config.data.labels = ["Sem Dados"]
+        ageChart.config.data.datasets[0].data = [regYearNoData]
+        Object.keys(regYears).sort((a, b) => a.localeCompare(b)).forEach(k => {
+            ageChart.config.data.labels.push(k)
+            ageChart.config.data.datasets[0].data.push(regYears[k])
+        })
+        console.log(regYears)
+
+        fleetChart.update()
+        perOperatorChart.update()
+        contactlessChart.update()
+        ageChart.update()
+        v2.forEach(v => {
+            vehicleCache.set(v.id, v);
+            return v;
+        })
+        return v2
+    }).then(r => r.filter(z => z.lat)).then(r => r.filter(z => z.timestamp > Date.now() / 1000 - 120)).then(vec => {
+        const updatedIds = new Set();
+        statsDiv.querySelector("#stats-vecspeed #vehicles .line-badge").innerHTML = vec.length
+
+        statsDiv.querySelector("#stats-vecspeed #speed .line-badge").innerHTML = (vec.reduce((acc, val) => acc += val.speed * 3.6, 0) / vec.length).toFixed(2)
+
+        statsDiv.querySelector("#stats-operators #stats-op-a1 .line-badge").innerHTML = vec.filter(a => a.agency_id === "41").length
+        statsDiv.querySelector("#stats-operators #stats-op-a2 .line-badge").innerHTML = vec.filter(a => a.agency_id === "42").length
+        statsDiv.querySelector("#stats-operators #stats-op-a3 .line-badge").innerHTML = vec.filter(a => a.agency_id === "43").length
+        statsDiv.querySelector("#stats-operators #stats-op-a4 .line-badge").innerHTML = vec.filter(a => a.agency_id === "44").length
+
+        if (flipFlop) {
+            let now = new Date(Date.now())
+            now.setSeconds(0, 0)
+            nowStr = now.getTime().toString()
+            stats.TOTAL[nowStr] = vec.length
+            stats.CM1[nowStr] = vec.filter(a => a.agency_id === "41").length
+            stats.CM2[nowStr] = vec.filter(a => a.agency_id === "42").length
+            stats.CM3[nowStr] = vec.filter(a => a.agency_id === "43").length
+            stats.CM4[nowStr] = vec.filter(a => a.agency_id === "44").length
+
+            timeLabels.push(nowStr)
+
+            vehicleChartDatasets[0].data.push({ x: nowStr, y: vec.length })
+            vehicleChartDatasets[1].data.push({ x: nowStr, y: stats.CM1[nowStr] })
+            vehicleChartDatasets[2].data.push({ x: nowStr, y: stats.CM2[nowStr] })
+            vehicleChartDatasets[3].data.push({ x: nowStr, y: stats.CM3[nowStr] })
+            vehicleChartDatasets[4].data.push({ x: nowStr, y: stats.CM4[nowStr] })
+
+            speeds.TOTAL[nowStr] = (vec.reduce((acc, val) => acc += val.speed * 3.6, 0))
+            speeds.CM1[nowStr] = (vec.filter(a => a.agency_id === "41").reduce((acc, val) => acc += val.speed * 3.6, 0))
+            speeds.CM2[nowStr] = (vec.filter(a => a.agency_id === "42").reduce((acc, val) => acc += val.speed * 3.6, 0))
+            speeds.CM3[nowStr] = (vec.filter(a => a.agency_id === "43").reduce((acc, val) => acc += val.speed * 3.6, 0))
+            speeds.CM4[nowStr] = (vec.filter(a => a.agency_id === "44").reduce((acc, val) => acc += val.speed * 3.6, 0))
+
+            speedChartDatasets[0].data.push({ x: nowStr, y: (speeds.TOTAL[nowStr] / stats.TOTAL[nowStr]).toFixed(2) })
+            speedChartDatasets[1].data.push({ x: nowStr, y: (speeds.CM1[nowStr] / stats.CM1[nowStr]).toFixed(2) })
+            speedChartDatasets[2].data.push({ x: nowStr, y: (speeds.CM2[nowStr] / stats.CM2[nowStr]).toFixed(2) })
+            speedChartDatasets[3].data.push({ x: nowStr, y: (speeds.CM3[nowStr] / stats.CM3[nowStr]).toFixed(2) })
+            speedChartDatasets[4].data.push({ x: nowStr, y: (speeds.CM4[nowStr] / stats.CM4[nowStr]).toFixed(2) })
+
+            vehicleChart.update()
+            speedChart.update()
+        }
+
+        vec.forEach(v => {
+            const id = v.id;
+            const lat = v.lat;
+            const lng = v.lon;
+            const bearing = v.bearing;
+
+            updatedIds.add(id);
+
+            if (vehicleRegistry.has(id)) {
+                const vehicle = vehicleRegistry.get(id);
+
+                if ((selectedVehicle && selectedVehicle !== v.id) || !checkFilters(id, false)) {
+                    vehicleLayer.removeLayer(vehicle);
+                }
+                vehicle.setRotationAngle(bearing);
+                glideTo(vehicle, lat, lng, 900);
+                if (id === selectedVehicle) showInfo(v.id);
+
+
+                return;
+            }
+
+            const vehicle = L.marker([lat, lng], {
+                icon: vehicleIcon,
+                rotationAngle: bearing,
+                rotationOrigin: "center center"
+            })
+            if ((!selectedVehicle || selectedVehicle === v.id) && checkFilters(id, false)) vehicle.addTo(vehicleLayer);
+
+            vehicle.currentPos = { lat, lng };
+            vehicle.isAnimating = false;
+
+            vehicle.on("click", () => {
+                showInfo(v.id);
+            });
+
+
+
+            vehicleRegistry.set(id, vehicle);
+        })
+
+        vehicleRegistry.forEach((vehicle, id) => {
+            if (!updatedIds.has(id)) {
+                vehicleLayer.removeLayer(vehicle); // remove from map
+                vehicleRegistry.delete(id);        // remove from registry
+                vehicleCache.delete(id); //delete from cache
+            }
+        });
+    })
+
+    fetch("https://api.carrismetropolitana.pt/v2/metrics/videowall/sla").then(r => r.json()).then(r => {
+        statsDiv.querySelector("#stats-vecspeed #trips .line-badge").innerHTML = formatNumber(r.data._cm_scheduled_rides_until_now)
+    })
+
+    fetch("https://api.carrismetropolitana.pt/v2/metrics/videowall/validations").then(r => r.json()).then(r => {
+        statsDiv.querySelector("#stats-vecspeed #passengers .line-badge").innerHTML = formatNumber(r.data._cm_today_valid_count)
+    })
+
+    fetch("https://api.carrismetropolitana.pt/v2/metrics/videowall/vkm").then(r => r.json()).then(r => {
+        statsDiv.querySelector("#stats-vecspeed #kms .line-badge").innerHTML = formatNumber(r.data._cm_simple_three_events_vkm_until_now.toFixed(0))
+    })
+}
+let mapDiv;
+document.addEventListener("keydown", function (e) {
+
+    if (mapDiv.contains(e.target)) {
+        if (e.key === "Escape" || e.key === "Esc") {
+            hideInfo();
+        }
+        if ("abcdefghijklmnopqrstuvwxyz%|1234567890!='[]-_\\(),. ".includes(e.key.toLowerCase())) {
+            searchTerm = searchTerm + e.key.toUpperCase().replaceAll("\\", "|").replaceAll("(", "[").replaceAll("'", "=").replaceAll(")", "]").replaceAll(",", "[").replaceAll(".", "]")
+            updateSearchbar()
+        }
+        if (e.key === "Backspace") {
+            searchTerm = searchTerm.substring(0, searchTerm.length - 1)
+            updateSearchbar()
+        }
+    }
+});
+
+colors = {
+    "TOTAL": "#FFDD00",
+    "CM1": "#3D85C6",
+    "CM2": "#C61D23",
+    "CM3": "#BB3E96",
+    "CM4": "#0C807E"
+}
+
+areas = {
+    "TOTAL": "TOTAL",
+    "CM1": "Área 1",
+    "CM2": "Área 2",
+    "CM3": "Área 3",
+    "CM4": "Área 4"
+}
+
+function drawGraphs() {
+    const ctx = document.getElementById('vehicleChart').getContext('2d');
+    const ctx2 = document.getElementById('speedChart').getContext('2d');
+
+    timeLabels = Object.keys(stats.TOTAL).map(a => a)
+
+    const BATCH = 10;
+
+    vehicleChartDatasets = ['TOTAL', 'CM1', 'CM2', 'CM3', 'CM4'].map(key => {
+        const timestamps = Object.keys(stats.TOTAL);
+
+        const averagedData = [];
+
+        for (let i = 0; i < timestamps.length; i += BATCH) {
+            const slice = timestamps.slice(i, i + BATCH);
+
+            let sum = 0;
+            let count = 0;
+
+            for (const ts of slice) {
+                const val = stats[key][ts];
+                if (val !== undefined && val !== null) {
+                    sum += val;
+                    count++;
+                }
+            }
+
+            averagedData.push({
+                x: slice[0],
+                y: count ? Math.round(sum / count) : null
+            });
+        }
+
+        return {
+            label: areas[key],
+            data: averagedData,
+            borderColor: colors[key],
+            backgroundColor: colors[key] + "33",
+            fill: false,
+            pointRadius: 0
+        };
+    })
+
+    speedChartDatasets = ['TOTAL', 'CM1', 'CM2', 'CM3', 'CM4'].map(key => {
+        const timestamps = Object.keys(stats.TOTAL);
+
+        const averagedData = [];
+
+        for (let i = 0; i < timestamps.length; i += BATCH) {
+            const slice = timestamps.slice(i, i + BATCH);
+
+            let sum = 0;
+            let count = 0;
+
+            for (const ts of slice) {
+                const val = (speeds[key][ts] / stats[key][ts]);
+                if (val !== undefined && val !== null) {
+                    sum += val;
+                    count++;
+                }
+            }
+
+            averagedData.push({
+                x: slice[0],
+                y: count ? (sum / count).toFixed(2) : null
+            });
+        }
+
+        return {
+            label: areas[key],
+            data: averagedData,
+            borderColor: colors[key],
+            backgroundColor: colors[key] + "33",
+            fill: false,
+            pointRadius: 0
+        }
+    })
+
+    graphOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                labels: { color: 'white' },
+                display: true
+            },
+            tooltip: {
+                enabled: true, mode: 'index',
+                intersect: false,
+                callbacks: {
+                    title: function (context) {
+                        const xValue = context[0].label;
+                        const date = new Date(parseInt(xValue));
+                        const hh = String(date.getHours()).padStart(2, '0');
+                        const mm = String(date.getMinutes()).padStart(2, '0');
+                        return `${hh}:${mm}`;
+                    },
+                }
+            },
+            title: {
+                display: true,
+                text: 'Veículos em operação',
+                color: 'white',
+                font: {
+                    size: 18,
+                    weight: 'bold'
+                },
+                padding: {
+                    top: 10,
+                    bottom: 20
+                }
+            },
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { color: 'white' } },
+            x: {
+                ticks: {
+                    color: 'white',
+                    autoSkip: false,
+                    maxTicksLimit: 24,
+                    callback: function (val, index) {
+                        let dateparse = new Date(parseInt(this.getLabelForValue(val)))
+                        return dateparse.getMinutes() === 0 ? parseHHMM(dateparse) : '';
+                    }
+                }
+            }
+        }
+    }
+
+    vehicleChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timeLabels,
+            datasets: vehicleChartDatasets
+        },
+        options: graphOptions
+    });
+
+    speedChart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: timeLabels,
+            datasets: speedChartDatasets
+        },
+        options: { ...graphOptions, scale: { y: { max: 60 } }, plugins: { ...graphOptions.plugins, title: { ...graphOptions.plugins.title, text: "Velocidade média (km/h)" } } }
+    });
+
+    pieOpts = {
+        maintainAspectRatio: true,
+        responsive: true,
+        plugins: {
+            legend: {
+                labels: { color: 'white' }, font: {
+                    size: 10
+                }
+            },
+            title: {
+                display: true,
+                text: 'Estado',
+                color: 'white',
+                font: {
+                    size: 18,
+                    weight: 'bold'
+                },
+                padding: {
+                    top: 10,
+                    bottom: 10
+                }
+            }
+        }
+    }
+
+    const fleetChartCtx = document.getElementById('fleetChart').getContext('2d');
+    fleetChart = new Chart(fleetChartCtx, {
+        type: "doughnut",
+        data: {
+            labels: [
+                'A circular',
+                'Ativo (Hoje)',
+                'Ativo (7d)',
+                'Inativo'
+            ],
+            datasets: [{
+                data: [0, 0, 0, 1],
+                backgroundColor: [
+                    "#ffdd00",
+                    "#269cb9",
+                    "#22a64e",
+                    "#d23939"
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: pieOpts
+    })
+
+    const perOperatorChartCtx = document.getElementById('perOperatorChart').getContext('2d');
+    perOperatorChart = new Chart(perOperatorChartCtx, {
+        type: "doughnut",
+        data: {
+            labels: [
+                'A1 (VA)',
+                'A2 (RL)',
+                'A3 (TST)',
+                'A4 (AT)'
+            ],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    "#3D85C6",
+                    "#C61D23",
+                    "#BB3E96",
+                    "#0C807E"
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: { ...pieOpts, plugins: { ...pieOpts.plugins, title: { ...pieOpts.plugins.title, text: "Frota por área" } } }
+    })
+
+    const contactlessChartCtx = document.getElementById('contactlessChart').getContext('2d');
+    contactlessChart = new Chart(contactlessChartCtx, {
+        type: "doughnut",
+        data: {
+            labels: [
+                'Sim',
+                'Não',
+                'Sem Dados'
+            ],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    "#22a64e",
+                    "#d23939",
+                    "#cfcfcf"
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: { ...pieOpts, plugins: { ...pieOpts.plugins, title: { ...pieOpts.plugins.title, text: "Contactless" } } }
+    })
+
+    const ageChartCtx = document.getElementById('ageChart').getContext('2d');
+    ageChart = new Chart(ageChartCtx, {
+        type: "doughnut",
+        data: {
+            labels: [
+                "Sem Dados"
+            ],
+            datasets: [{
+                data: [1],
+                backgroundColor: [
+                    "#cfcfcf",
+                    "#a62222ff",
+                    "#d28039ff",
+                    "#a68522ff",
+                    "#5ba622ff",
+                    "#22a666ff",
+                    "#22a69fff",
+                    "#227aa6ff",
+                    "#2238a6ff",
+                    "#5b22a6ff",
+                    "#8e22a6ff",
+                    "#a62289ff",
+                    "#a62222ff",
+                    "#d28039ff",
+                    "#a68522ff",
+                    "#5ba622ff",
+                    "#22a666ff",
+                    "#22a69fff",
+                    "#227aa6ff",
+                    "#2238a6ff",
+                    "#5b22a6ff",
+                    "#8e22a6ff",
+                    "#a62289ff"
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: { ...pieOpts, plugins: { ...pieOpts.plugins, title: { ...pieOpts.plugins.title, text: "Ano de registo" } } }
+    })
+}
+
+let flipFlop = true;
+
+async function main() {
+    //if(window.map) window.map.remove()
+    mapDiv = document.getElementById("map");
+    searchTerm = ""
+    searchBar = map.querySelector("#searchBar")
+    searchBar.style.display = "hidden"
+    filters = {}
+    vehicleInfo = document.querySelector("#map #info")
+    hideInfo()
+    vehicleRegistry.clear()
+    setupMap()
+    drawGraphs()
+    refreshInterval = setInterval(() => {
+        flipFlop = !flipFlop;
+        refresh()
+    }, 30_000)
+    intervals.add(refreshInterval)
+    refresh()
+
+}
