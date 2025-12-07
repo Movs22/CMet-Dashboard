@@ -1,4 +1,4 @@
-const HISTORY_ENDPOINT = "http://mvs22.vm.blahajcloud.net:65000/{DATE}/{AREA}.txt"
+const HISTORY_ENDPOINT = "https://mvs22.vm.blahajcloud.net:65000/{DATE}/{AREA}.txt"
 const API = "https://api.cmet.pt/"
 
 let stops = null
