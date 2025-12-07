@@ -95,7 +95,7 @@ async function load() {
     p = 100
     setStage(p, "Carregado!")
     loading.classList.remove("loading")
-    if (!window.Location.pathname || window.Location.pathname === "/") return loadPage("/dashboard")
+    if (!window.Location.pathname || window.Location.pathname === "/") return loadPage("/CMet-Dashboard/dashboard")
     let redirect = new URLSearchParams(window.location.search).get("redirect")
 
     if (redirect) loadPage(redirect)

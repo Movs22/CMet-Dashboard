@@ -120,7 +120,7 @@ async function loadPage(url, push = true) {
   } catch (err) {
     console.log(err)
     history.pushState({ url }, "", url);
-    loadPage("/404.html", false);
+    loadPage("/CMet-Dashboard/404.html", false);
     notfound = true
   }
 }
@@ -130,8 +130,8 @@ async function loadPage(url, push = true) {
 window.addEventListener("popstate", e => {
   if (e.state?.url) {
     loadPage(e.state.url, false);
-    if (e.state?.url.startsWith("/dashboard/Area")) highlight("area" + new URLSearchParams(e.state?.url.split("?")[1]).get("a"))
-    else if (e.state?.url.startsWith("/dashboard")) highlight('home')
+    if (e.state?.url.startsWith("/CMet-Dashboard/dashboard/Area")) highlight("area" + new URLSearchParams(e.state?.url.split("?")[1]).get("a"))
+    else if (e.state?.url.startsWith("/CMet-Dashboard/dashboard")) highlight('home')
   }
 });
 
