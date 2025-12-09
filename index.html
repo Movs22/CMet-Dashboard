@@ -8,10 +8,13 @@
     <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
     <script src="https://bbecquet.github.io/Leaflet.PolylineDecorator/dist/leaflet.polylineDecorator.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="/CMet-Dashboard/js/utils/main.js"></script>
+    <script src="/CMet-Dashboard/js/utils/va.js"></script>
 </head>
 
 <body>
-    <div class="loading-overlay loading" id="loading">
+    <div class="loading-overlay" id="loading">
         <div class="loading-box">
             <p style="font-size: 2rem; font-weight: bold;" class="loading-header">CMet Dashboard</p>
             <p id="loading-status">A carregar página inicial</p>
@@ -24,11 +27,9 @@
     </div>
     <nav class="menu">
             <a onclick="loadPage('/CMet-Dashboard/dashboard'); highlight('home')" id="home" class="active">Início</a>
-            <a onclick="loadPage('/CMet-Dashboard/dashboard/Area?a=1'); highlight('area1')" id="area1">Área 1</a>
-            <a onclick="loadPage('/CMet-Dashboard/dashboard/Area?a=2'); highlight('area2')" id="area2">Área 2</a>
-            <a onclick="loadPage('/CMet-Dashboard/dashboard/Area?a=3'); highlight('area3')" id="area3">Área 3</a>
-            <a onclick="loadPage('/CMet-Dashboard/dashboard/Area?a=4'); highlight('area4')" id="area4">Área 4</a>
-            <p id="time">XX:XX:XX YY/YY/ZZZZ</p>
+            <a onclick="loadPage('/CMet-Dashboard/vehicles'); highlight('vehicles')" id="vehicles">Frota</a>
+            <a onclick="loadPage('/CMet-Dashboard/lines'); highlight('lines')" id="lines">Linhas</a>
+            <a onclick="loadPage('/CMet-Dashboard/areas'); highlight('areas')" id="areas">Áreas</a>
             <script>
                 function highlight(id) {
                     document.querySelector("nav.menu .active").classList.remove("active")
@@ -39,16 +40,33 @@
                 else if(redirect && redirect.startsWith("/CMet-Dashboard/dashboard")) highlight('home')
             </script>
     </nav>
+    <div class="selection">
+        <strong>Área: </strong><select id="area">
+            <option value="all">Vista Global</option>
+            <option value="a1">Área 1 (Viação Alvorada)</option>
+            <option value="a2">Área 2 (Rodoviária de Lisboa)</option>
+            <option value="a3">Área 3 (Transportes Sul do Tejo)</option>
+            <option value="a4">Área 4 (Alsa Todi)</option>
+        </select>
+        <strong>Setor: </strong><select id="sector">
+            <option value="all">N/A</option>
+            <option value="a1-queluzbaixo" disabled>A1 Queluz Baixo</option>
+            <option value="a1-adroana" disabled>A1 Adroana</option>
+        </select>
+        <script src="/CMet-Dashboard/js/selection.js"></script>
+        <p id="time">XX:XX:XX YY/YY/ZZZZ</p>
+    </div>
+
     <div class="warning">
         <strong>Atenção: </strong>este site ainda está em versão BETA. Caso tenha alguma sugestão ou problema, por favor contacte <a href="https://discord.com/users/896732255534338078">@Movies22</a>
     </div>
         <main id="dashboard">
             <div class="line-badge" style="font-size: 2rem; background-color: #707; color: white">9999</div>
         </main>
-        <script src="./router.js"></script>
-        <script src="./loading.js"></script>
+        <script src="/CMet-Dashboard/js/router.js"></script>
+        <script src="/CMet-Dashboard/js/loading.js"></script>
 
-        <script src="./data.js"></script>
+        <script src="/CMet-Dashboard/js/data.js"></script>
         <script>
             let clock = document.getElementById("time")
             let rightNow
@@ -62,11 +80,11 @@
                 let hour = rightNow.getHours()
                 let min = rightNow.getMinutes()
                 let sec = rightNow.getSeconds()
-                clock.innerHTML = (hour < 10 ? "0" + hour : hour) + ":" + (min < 10 ? "0" + min : min) + "<span style=\"color: #afafaf; font-size: .8rem; margin-right: .5rem\">:" + (sec < 10 ? "0" + sec : sec) + "</span>" + (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y 
+                clock.innerHTML = (hour < 10 ? "0" + hour : hour) + ":" + (min < 10 ? "0" + min : min) + "<span style=\"color: #7f7f7f; font-size: .8rem; margin-right: .5rem\">:" + (sec < 10 ? "0" + sec : sec) + "</span>" + (d < 10 ? "0" + d : d) + "/" + (m < 10 ? "0" + m : m) + "/" + y 
             }
             updatePageClock()
         </script>
-        <script>setTimeout(() => load(), 100)</script>
+        <script>//setTimeout(() => load(), 100)</script>
 </body>
 
 </html>

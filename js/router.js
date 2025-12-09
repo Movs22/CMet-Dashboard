@@ -61,7 +61,7 @@ async function loadPage(url, push = true) {
     async function loadScriptSequential(script) {
       return new Promise((resolve, reject) => {
         const s = document.createElement("script");
-
+        s.type = script.type
         if (script.src) {
           s.src = script.src;
           s.onload = resolve;
@@ -95,6 +95,7 @@ async function loadPage(url, push = true) {
 
       const s = document.createElement("script");
       if (script.src) {
+        s.type = script.type
         s.src = script.src;
         s.defer;
       } else {

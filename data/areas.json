@@ -1,0 +1,71 @@
+{
+    "GLOBAL": {
+        "sectors": [],
+        "agency_id": "*",
+        "name": "*",
+        "full_name": "GLOBAL"
+    },
+    "41": {
+        "sectors": {
+            "QueluzBaixo": {
+                "full_name": "Queluz de Baixo",
+                "name": "Queluz Baixo",
+                "groups": {
+                    "Amadora": ["0","1"],
+                    "Cacém": ["2"],
+                    "Oeiras": ["4","5"],
+                    "Queluz": ["6"],
+                    "Sintra": ["8"]
+                }
+            },
+            "Adroana": {
+                "full_name": "Adroana",
+                "name": "Adroana",
+                "groups": {
+                    "Carcavelos": ["3"],
+                    "Sintra": ["7"]
+                }
+            },
+            "Montelavar": {
+                "full_name": "Montelavar",
+                "name": "Montelavar",
+                "groups": {
+                    "Montelavar": ["9"]
+                }
+            },
+            "Special": {
+                "full_name": "Substituição CP",
+                "name": "Subst. CP",
+                "groups": {
+                    "Montelavar": ["9"]
+                }
+            }
+        },
+        "sectorMatchRule": "utils.va.placas",
+        "groupMatchRule": "utils.va.chapas",
+        "agency_id": "41",
+        "name": "VA",
+        "full_name": "Viação Alvorada"
+    },
+    "42": {
+        "sectors": {
+        },
+        "agency_id": "42",
+        "name": "RL",
+        "full_name": "Rodoviária de Lisboa"
+    },
+    "43": {
+        "sectors": {
+        },
+        "agency_id": "43",
+        "name": "TST",
+        "full_name": "Transportes Sul do Tejo"
+    },
+    "44": {
+        "sectors": {
+        },
+        "agency_id": "44",
+        "name": "AT",
+        "full_name": "Alsa Todi"
+    }
+}
